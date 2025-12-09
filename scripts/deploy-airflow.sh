@@ -233,6 +233,28 @@ done
 echo -e "${GREEN}✓ LoadBalancer IP assigned${NC}"
 echo ""
 
+# Create admin user if it doesn't exist
+echo -e "${YELLOW}Creating admin user...${NC}"
+WEBSERVER_POD=$(kubectl get pods -n "${NAMESPACE}" -l component=webserver -o jsonpath='{.items[0].metadata.name}')
+
+# Check if user exists
+USER_EXISTS=$(kubectl exec -n "${NAMESPACE}" "${WEBSERVER_POD}" -- airflow users list 2>/dev/null | grep -c "^admin" || true)
+
+if [ "$USER_EXISTS" -eq 0 ]; then
+  echo "  Creating admin user..."
+  kubectl exec -n "${NAMESPACE}" "${WEBSERVER_POD}" -- airflow users create \
+    --username admin \
+    --firstname Admin \
+    --lastname User \
+    --role Admin \
+    --email admin@example.com \
+    --password admin >/dev/null 2>&1
+  echo -e "${GREEN}✓ Admin user created${NC}"
+else
+  echo -e "${GREEN}✓ Admin user already exists${NC}"
+fi
+echo ""
+
 # Summary
 echo -e "${GREEN}================================================${NC}"
 echo -e "${GREEN}Airflow Deployment Complete!${NC}"
@@ -240,8 +262,8 @@ echo -e "${GREEN}================================================${NC}"
 echo ""
 echo -e "${YELLOW}Access Information:${NC}"
 echo "  Airflow UI URL:        http://${EXTERNAL_IP}:8080"
-echo "  Default Username:      admin"
-echo "  Default Password:      admin"
+echo "  Username:              admin"
+echo "  Password:              admin"
 echo "  Namespace:             ${NAMESPACE}"
 echo ""
 echo -e "${YELLOW}Verify Installation:${NC}"

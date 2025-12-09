@@ -32,24 +32,32 @@ cd airflow
 # 2. Deploy Azure infrastructure (10-15 minutes)
 ./scripts/deploy-infrastructure.sh
 
-# 3. Deploy Airflow to Kubernetes (5-10 minutes)
+# 3. Configure RBAC permissions (required)
+./scripts/configure-permissions.sh
+
+# 4. Deploy Airflow to Kubernetes (5-10 minutes)
 ./scripts/deploy-airflow.sh
 
-# 4. Access the Airflow UI
+# 5. Access the Airflow UI
 kubectl get svc -n airflow airflow-webserver
 # Open http://<EXTERNAL-IP>:8080 in your browser
-# Username: admin | Password: admin
+# Login with credentials created during deployment
 ```
 
 ## Prerequisites
 
 - Azure subscription with contributor access
-- Azure CLI (`az`)
-- kubectl
-- Helm 3
+- Azure CLI (`az`) - [Install](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+- kubectl - [Install](https://kubernetes.io/docs/tasks/tools/)
+- Helm 3 - [Install](https://helm.sh/docs/intro/install/)
 - Git
-- OpenSSL
-- Python 3 with `cryptography` package
+- jq - [Install](https://stedolan.github.io/jq/download/)
+- Python 3 with `cryptography` package:
+  ```bash
+  pip install cryptography
+  ```
+
+**Note**: The deployment scripts will automatically install the `cryptography` Python package if it's missing.
 
 ## Repository Structure
 

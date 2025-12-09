@@ -24,6 +24,15 @@ echo ""
 # Check prerequisites
 echo -e "${YELLOW}Checking prerequisites...${NC}"
 command -v az >/dev/null 2>&1 || { echo -e "${RED}Azure CLI is required but not installed. Aborting.${NC}" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo -e "${RED}jq is required but not installed. Aborting.${NC}" >&2; exit 1; }
+command -v kubectl >/dev/null 2>&1 || { echo -e "${RED}kubectl is required but not installed. Aborting.${NC}" >&2; exit 1; }
+
+# Check for Python cryptography module
+python3 -c "from cryptography.fernet import Fernet" >/dev/null 2>&1 || {
+  echo -e "${YELLOW}Python cryptography module not found. Installing...${NC}"
+  pip install cryptography -q || { echo -e "${RED}Failed to install cryptography module. Aborting.${NC}" >&2; exit 1; }
+  echo -e "${GREEN}✓ cryptography module installed${NC}"
+}
 
 # Login check
 echo -e "${YELLOW}Verifying Azure CLI login...${NC}"
@@ -184,8 +193,12 @@ echo "  PostgreSQL Server:     ${POSTGRES_FQDN}"
 echo "  Storage Account:       ${STORAGE_ACCOUNT}"
 echo ""
 echo -e "${YELLOW}Next Steps:${NC}"
-echo "  1. Run the Airflow deployment script:"
+echo "  1. Configure RBAC permissions (REQUIRED):"
+echo "     ./scripts/configure-permissions.sh"
+echo ""
+echo "  2. Deploy Airflow to the cluster:"
 echo "     ./scripts/deploy-airflow.sh"
 echo ""
 echo -e "${YELLOW}Note:${NC} All secrets have been stored in Azure Key Vault: ${KV_NAME}"
+echo -e "${YELLOW}Note:${NC} RBAC permissions must be configured before deploying Airflow"
 echo ""
