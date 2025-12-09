@@ -184,28 +184,34 @@ echo ""
 # Install/Upgrade Airflow
 echo -e "${YELLOW}Installing Apache Airflow (this may take 5-10 minutes)...${NC}"
 
-# Extract postgres host from connection string
-POSTGRES_HOST=$(echo "${POSTGRES_CONN}" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+# Retrieve secrets from Key Vault
+FERNET_KEY=$(az keyvault secret show \
+  --vault-name "${KV_NAME}" \
+  --name "airflow-fernet-key" \
+  --query value -o tsv)
 
+WEBSERVER_SECRET=$(az keyvault secret show \
+  --vault-name "${KV_NAME}" \
+  --name "airflow-webserver-secret-key" \
+  --query value -o tsv)
+
+STORAGE_NAME=$(az keyvault secret show \
+  --vault-name "${KV_NAME}" \
+  --name "storage-account-name" \
+  --query value -o tsv)
+
+# Install Airflow using the secret for database connection
 helm upgrade --install "${HELM_RELEASE}" apache-airflow/airflow \
   --namespace "${NAMESPACE}" \
+  --version 1.13.1 \
   --values "${VALUES_FILE}" \
-  --set data.metadataConnection.host="${POSTGRES_HOST}" \
-  --set-string env[0].name="AIRFLOW__DATABASE__SQL_ALCHEMY_CONN" \
-  --set-string env[0].valueFrom.secretKeyRef.name="airflow-postgresql" \
-  --set-string env[0].valueFrom.secretKeyRef.key="connection" \
-  --set-string env[1].name="AIRFLOW__CORE__FERNET_KEY" \
-  --set-string env[1].valueFrom.secretKeyRef.name="airflow-secrets" \
-  --set-string env[1].valueFrom.secretKeyRef.key="fernet-key" \
-  --set-string env[2].name="AIRFLOW__WEBSERVER__SECRET_KEY" \
-  --set-string env[2].valueFrom.secretKeyRef.name="airflow-secrets" \
-  --set-string env[2].valueFrom.secretKeyRef.key="webserver-secret-key" \
+  --set data.metadataSecretName="airflow-postgresql" \
+  --set fernetKey="${FERNET_KEY}" \
+  --set webserverSecretKey="${WEBSERVER_SECRET}" \
   --set-string env[3].name="AZURE_STORAGE_ACCOUNT_NAME" \
-  --set-string env[3].valueFrom.secretKeyRef.name="airflow-azure-storage" \
-  --set-string env[3].valueFrom.secretKeyRef.key="storage-account-name" \
+  --set-string env[3].value="${STORAGE_NAME}" \
   --set-string env[4].name="AZURE_STORAGE_ACCOUNT_KEY" \
-  --set-string env[4].valueFrom.secretKeyRef.name="airflow-azure-storage" \
-  --set-string env[4].valueFrom.secretKeyRef.key="storage-account-key" \
+  --set-string env[4].value="${STORAGE_KEY}" \
   --timeout 15m \
   --wait
 

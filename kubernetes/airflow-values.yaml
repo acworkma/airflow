@@ -40,7 +40,7 @@ config:
     delete_worker_pods: 'true'
     delete_worker_pods_on_failure: 'false'
 
-# Environment variables
+# Environment variables - simple key-value pairs only
 env:
   - name: AIRFLOW__LOGGING__REMOTE_LOGGING
     value: "true"
@@ -200,21 +200,7 @@ pgbouncer:
 flower:
   enabled: false
 
-# Extra secrets (will be populated from Key Vault)
-extraSecrets:
-  airflow-azure-connection:
-    data: {}
-
-# Volume mounts for secrets
-extraVolumes:
-  - name: secrets-store
-    csi:
-      driver: secrets-store.csi.k8s.io
-      readOnly: true
-      volumeAttributes:
-        secretProviderClass: "airflow-kv-sync"
-
-extraVolumeMounts:
-  - name: secrets-store
-    mountPath: "/mnt/secrets-store"
-    readOnly: true
+# Extra secrets - secrets will be created separately via kubectl
+# The deployment script creates:
+# - airflow-azure-blob-connection: Azure Blob Storage credentials
+# - airflow-postgresql: PostgreSQL connection from Key Vault
