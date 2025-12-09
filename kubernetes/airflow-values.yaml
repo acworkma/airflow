@@ -1,0 +1,220 @@
+# Apache Airflow Helm Chart Configuration for AKS
+# This values file configures Airflow with KubernetesExecutor and Azure integrations
+
+# Airflow version and image
+images:
+  airflow:
+    repository: apache/airflow
+    tag: "2.8.1-python3.11"
+    pullPolicy: IfNotPresent
+
+# Executor configuration - KubernetesExecutor for dynamic pod creation
+executor: "KubernetesExecutor"
+
+# Airflow configuration
+config:
+  core:
+    # Load examples disabled for clean lab environment
+    load_examples: 'false'
+    # Remote logging to Azure Blob Storage
+    remote_logging: 'true'
+    remote_base_log_folder: 'wasb-airflow-logs'
+    remote_log_conn_id: 'azure_blob_logs'
+    # Colored logs
+    colored_console_log: 'true'
+  
+  logging:
+    # Azure Blob Storage logging
+    remote_logging: 'true'
+    
+  webserver:
+    # Expose Airflow UI configuration
+    expose_config: 'true'
+    # Default timezone
+    default_ui_timezone: 'America/New_York'
+
+  kubernetes:
+    # Namespace for worker pods
+    namespace: 'airflow'
+    # Delete worker pods after completion
+    delete_worker_pods: 'true'
+    delete_worker_pods_on_failure: 'false'
+
+# Environment variables
+env:
+  - name: AIRFLOW__LOGGING__REMOTE_LOGGING
+    value: "true"
+  - name: AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER
+    value: "wasb-airflow-logs"
+  - name: AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID
+    value: "azure_blob_logs"
+
+# PostgreSQL database configuration (external)
+postgresql:
+  enabled: false
+
+# External database configuration
+data:
+  # Metadata database connection
+  metadataConnection:
+    user: airflowadmin
+    protocol: postgresql
+    host: ~  # Will be set via secret
+    port: 5432
+    db: airflow
+    sslmode: require
+
+# External database secret reference
+externalDatabase:
+  type: postgres
+  # Secret will be created by deployment script from Key Vault
+
+# Disable embedded Redis (not needed for KubernetesExecutor)
+redis:
+  enabled: false
+
+# DAGs configuration with git-sync
+dags:
+  # Use git-sync to pull DAGs from GitHub repository
+  gitSync:
+    enabled: true
+    repo: https://github.com/acworkma/airflow
+    branch: main
+    rev: HEAD
+    depth: 1
+    maxFailures: 0
+    subPath: "dags"
+    wait: 60  # Sync interval in seconds
+    
+  # Persistence disabled when using git-sync
+  persistence:
+    enabled: false
+
+# Logs configuration
+logs:
+  # Disable persistence - using remote logging to Azure Blob
+  persistence:
+    enabled: false
+
+# Webserver configuration
+webserver:
+  # Number of webserver replicas
+  replicas: 2
+  
+  # Service configuration - LoadBalancer for external access
+  service:
+    type: LoadBalancer
+    ports:
+      - name: airflow-ui
+        port: 8080
+  
+  # Default admin user
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    email: admin@example.com
+    firstName: Admin
+    lastName: User
+    password: admin  # Change this in production!
+  
+  # Resource requests/limits
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# Scheduler configuration
+scheduler:
+  # Number of scheduler replicas (Airflow 2.x supports HA)
+  replicas: 2
+  
+  # Resource requests/limits
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Log grooming settings
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 15
+
+# Triggerer configuration (for deferrable operators)
+triggerer:
+  enabled: true
+  replicas: 1
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Worker configuration (not used with KubernetesExecutor but keeping for reference)
+workers:
+  # KubernetesExecutor creates worker pods dynamically
+  replicas: 0
+  
+  # Resource configuration for KubernetesPodOperator tasks
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# StatsD/metrics configuration
+statsd:
+  enabled: true
+
+# Service account
+serviceAccount:
+  create: true
+  name: airflow
+
+# RBAC for KubernetesExecutor
+rbac:
+  create: true
+  createSCCRoleBinding: false
+
+# Security context
+securityContext:
+  runAsUser: 50000
+  fsGroup: 0
+
+# PgBouncer disabled (not needed for lab environment)
+pgbouncer:
+  enabled: false
+
+# Flower disabled (only needed for CeleryExecutor)
+flower:
+  enabled: false
+
+# Extra secrets (will be populated from Key Vault)
+extraSecrets:
+  airflow-azure-connection:
+    data: {}
+
+# Volume mounts for secrets
+extraVolumes:
+  - name: secrets-store
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "airflow-kv-sync"
+
+extraVolumeMounts:
+  - name: secrets-store
+    mountPath: "/mnt/secrets-store"
+    readOnly: true

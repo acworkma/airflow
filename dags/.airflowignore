@@ -1,0 +1,48 @@
+# .airflowignore
+# This file specifies patterns of files that Airflow should ignore when scanning for DAGs
+
+# Ignore README files
+README.md
+README.txt
+*.md
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore test files
+test_*.py
+*_test.py
+tests/
+
+# Ignore configuration files
+.env
+.env.*
+*.yaml
+*.yml
+*.json
+*.ini
+*.cfg
+
+# Ignore documentation
+docs/
+*.rst
+
+# Ignore git files
+.git/
+.gitignore
+.gitattributes
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
